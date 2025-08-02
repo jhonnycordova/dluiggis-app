@@ -131,7 +131,6 @@ function OrderForm({ platform, onBack }: OrderFormProps) {
                 id="reference"
                 value={formData.reference}
                 onChange={(e) => handleInputChange('reference', e.target.value)}
-                required
                 className={styles.input}
               />
             </div>
@@ -208,6 +207,20 @@ function OrderForm({ platform, onBack }: OrderFormProps) {
                 <option value="card">Tarjeta</option>
               </select>
             </div>
+            
+            {formData.paymentMethod === 'card' && (
+              <div className={styles.formGroup}>
+                <label htmlFor="reference">Referencia:</label>
+                <input
+                  type="text"
+                  id="reference"
+                  value={formData.reference}
+                  onChange={(e) => handleInputChange('reference', e.target.value)}
+                  required
+                  className={styles.input}
+                />
+              </div>
+            )}
             
             <div className={styles.formGroup}>
               <label htmlFor="deliveryPerson">Entrega:</label>

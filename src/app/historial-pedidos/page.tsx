@@ -23,7 +23,23 @@ export default function HistorialPedidos() {
   useEffect(() => {
     const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
     setOrders(savedOrders);
-    setFilteredOrders(savedOrders);
+    
+    // Set current date as default
+    const today = new Date();
+    const todayString = today.getFullYear() + '-' + 
+      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+      String(today.getDate()).padStart(2, '0');
+    setSelectedDate(todayString);
+    
+    // Apply filter for current date
+    const filtered = savedOrders.filter((order: Order) => {
+      const orderDate = new Date(order.date);
+      const orderDateString = orderDate.getFullYear() + '-' + 
+        String(orderDate.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(orderDate.getDate()).padStart(2, '0');
+      return orderDateString === todayString;
+    });
+    setFilteredOrders(filtered);
   }, []);
 
   const handleBack = () => {
@@ -36,8 +52,11 @@ export default function HistorialPedidos() {
       setFilteredOrders(orders);
     } else {
       const filtered = orders.filter(order => {
-        const orderDate = new Date(order.date).toISOString().split('T')[0];
-        return orderDate === date;
+        const orderDate = new Date(order.date);
+        const orderDateString = orderDate.getFullYear() + '-' + 
+          String(orderDate.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(orderDate.getDate()).padStart(2, '0');
+        return orderDateString === date;
       });
       setFilteredOrders(filtered);
     }
@@ -85,6 +104,13 @@ export default function HistorialPedidos() {
     return orders.reduce((total, order) => total + order.amount, 0);
   };
 
+  const formatAmount = (amount: number) => {
+    return amount.toLocaleString('es-ES', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -115,10 +141,10 @@ export default function HistorialPedidos() {
             )}
           </div>
           
-          <div className={styles.summary}>
-            <p>Total de pedidos: {filteredOrders.length}</p>
-            <p>Total monto: ${calculateTotal(filteredOrders).toFixed(2)}</p>
-          </div>
+                      <div className={styles.summary}>
+              <p>Total de pedidos: {filteredOrders.length}</p>
+              <p>Total monto día: ${formatAmount(calculateTotal(filteredOrders))}</p>
+            </div>
         </div>
 
         <div className={styles.ordersContainer}>
@@ -141,14 +167,14 @@ export default function HistorialPedidos() {
                   
                   <div className={styles.orderDetails}>
                     <div className={styles.orderInfo}>
-                      <p><strong>Monto:</strong> ${order.amount.toFixed(2)}</p>
+                      <p><strong>Monto:</strong> ${formatAmount(order.amount)}</p>
                       {order.reference && (
                         <p><strong>Referencia:</strong> {order.reference}</p>
                       )}
-                      {order.paymentMethod && (
+                      {order.paymentMethod && order.platform === 'whatsapp' && (
                         <p><strong>Método de Pago:</strong> {getPaymentMethodName(order.paymentMethod)}</p>
                       )}
-                      {order.deliveryPerson && (
+                      {order.deliveryPerson && order.platform === 'whatsapp' && (
                         <p><strong>Entrega:</strong> {getDeliveryPersonName(order.deliveryPerson)}</p>
                       )}
                     </div>
