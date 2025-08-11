@@ -9,6 +9,8 @@ interface Order {
   platform: 'uber' | 'pedidosya' | 'whatsapp';
   reference?: string;
   amount: number;
+  commission?: number;
+  netAmount?: number;
   paymentMethod?: string;
   deliveryPerson?: string;
   date: string;
@@ -22,7 +24,42 @@ export default function HistorialPedidos() {
 
   useEffect(() => {
     const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-    setOrders(savedOrders);
+    
+    // Migrate existing orders to add commission and netAmount fields if missing
+    const migratedOrders = savedOrders.map((order: Order) => {
+      let commission = 0;
+      
+      // Calculate commission if missing
+      if (order.commission === undefined) {
+        if (order.platform === 'uber' || order.platform === 'pedidosya') {
+          commission = order.amount * 0.36; // 36% for Uber and PedidosYa
+        } else if (order.platform === 'whatsapp' && order.paymentMethod === 'card') {
+          commission = order.amount * 0.02; // 2% for WhatsApp card payments
+        }
+        
+        if (commission > 0) {
+          return {
+            ...order,
+            commission: commission,
+            netAmount: order.amount - commission
+          };
+        }
+      }
+      
+      // Add netAmount if missing but commission exists
+      if (order.commission !== undefined && order.netAmount === undefined) {
+        return {
+          ...order,
+          netAmount: order.amount - order.commission
+        };
+      }
+      
+      return order;
+    });
+    
+    // Save migrated orders back to localStorage
+    localStorage.setItem('orders', JSON.stringify(migratedOrders));
+    setOrders(migratedOrders);
     
     // Set current date as default
     const today = new Date();
@@ -32,7 +69,7 @@ export default function HistorialPedidos() {
     setSelectedDate(todayString);
     
     // Apply filter for current date
-    const filtered = savedOrders.filter((order: Order) => {
+    const filtered = migratedOrders.filter((order: Order) => {
       const orderDate = new Date(order.date);
       const orderDateString = orderDate.getFullYear() + '-' + 
         String(orderDate.getMonth() + 1).padStart(2, '0') + '-' + 
@@ -101,7 +138,15 @@ export default function HistorialPedidos() {
   };
 
   const calculateTotal = (orders: Order[]) => {
-    return orders.reduce((total, order) => total + order.amount, 0);
+    return orders.reduce((total, order) => {
+      // Exclude commission from total calculation
+      const orderAmount = order.amount - (order.commission || 0);
+      return total + orderAmount;
+    }, 0);
+  };
+
+  const calculateTotalCommission = (orders: Order[]) => {
+    return orders.reduce((total, order) => total + (order.commission || 0), 0);
   };
 
   const formatAmount = (amount: number) => {
@@ -144,6 +189,9 @@ export default function HistorialPedidos() {
                       <div className={styles.summary}>
               <p>Total de pedidos: {filteredOrders.length}</p>
               <p>Total monto día: ${formatAmount(calculateTotal(filteredOrders))}</p>
+              {/* {calculateTotalCommission(filteredOrders) > 0 && (
+                <p>Total comisión día: ${formatAmount(calculateTotalCommission(filteredOrders))}</p>
+              )} */}
             </div>
         </div>
 
@@ -168,6 +216,12 @@ export default function HistorialPedidos() {
                   <div className={styles.orderDetails}>
                     <div className={styles.orderInfo}>
                       <p><strong>Monto:</strong> ${formatAmount(order.amount)}</p>
+                      {order.commission && order.commission > 0 && (
+                        <p><strong>Comisión ({order.platform === 'whatsapp' ? '2%' : '36%'}):</strong> ${formatAmount(order.commission)}</p>
+                      )}
+                      {order.netAmount && (order.platform === 'uber' || order.platform === 'pedidosya' || (order.platform === 'whatsapp' && order.paymentMethod === 'card')) && (
+                        <p><strong>Monto total:</strong> ${formatAmount(order.netAmount)}</p>
+                      )}
                       {order.reference && (
                         <p><strong>Referencia:</strong> {order.reference}</p>
                       )}

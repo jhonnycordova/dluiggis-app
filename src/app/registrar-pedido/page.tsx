@@ -82,12 +82,25 @@ function OrderForm({ platform, onBack }: OrderFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const amount = parseFloat(formData.amount);
+    let commission = 0;
+    
+    if (platform === 'uber' || platform === 'pedidosya') {
+      commission = amount * 0.36; // 36% for Uber and PedidosYa
+    } else if (platform === 'whatsapp' && formData.paymentMethod === 'card') {
+      commission = amount * 0.02; // 2% for WhatsApp card payments
+    }
+    
+    const netAmount = commission > 0 ? amount - commission : amount;
+    
     const order = {
       id: Date.now().toString(),
       platform,
       ...formData,
       date: new Date().toISOString(),
-      amount: parseFloat(formData.amount)
+      amount: amount,
+      ...(commission > 0 && { commission: commission }),
+      ...(commission > 0 && { netAmount: netAmount })
     };
 
     // Save to localStorage

@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
   padding: 12px;
 }
 
@@ -85,17 +85,18 @@
 
 .dateInput:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #228B22;
 }
 
 .clearFilter {
-  background: #ff6b6b;
-  color: white;
+  background: #FFD700;
+  color: #333;
   border: none;
   padding: 0.75rem 1rem;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.9rem;
+  font-weight: 600;
   transition: all 0.3s ease;
   min-height: 44px;
   display: flex;
@@ -106,7 +107,7 @@
 
 .clearFilter:hover,
 .clearFilter:active {
-  background: #ff5252;
+  background: #DAA520;
 }
 
 .summary {
@@ -155,8 +156,8 @@
 
 .orderCard:hover,
 .orderCard:active {
-  border-color: #667eea;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.1);
+  border-color: #228B22;
+  box-shadow: 0 4px 20px rgba(34, 139, 34, 0.1);
   transform: translateY(-2px);
 }
 
@@ -168,7 +169,7 @@
 }
 
 .platformBadge {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #228B22, #006400);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 20px;

@@ -1,6 +1,6 @@
 .container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
   padding: 12px;
 }
 
@@ -88,9 +88,9 @@
 
 .platformButton:hover,
 .platformButton:active {
-  border-color: #667eea;
+  border-color: #228B22;
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 20px rgba(34, 139, 34, 0.2);
 }
 
 .platformIcon {
@@ -154,7 +154,7 @@
 .input:focus,
 .select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #228B22;
 }
 
 .formActions {
@@ -191,14 +191,14 @@
 }
 
 .submitButton {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #228B22, #006400);
   color: white;
 }
 
 .submitButton:hover,
 .submitButton:active {
   transform: translateY(-1px);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 15px rgba(34, 139, 34, 0.3);
 }
 
 /* Mobile-first responsive design */

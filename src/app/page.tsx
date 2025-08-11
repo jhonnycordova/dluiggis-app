@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import styles from './page.module.css';
 
 export default function Home() {
@@ -17,6 +18,16 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <main className={styles.main}>
+        <div className={styles.logoContainer}>
+          <Image
+            src="/logo.png"
+            alt="D'Luigis Pizzería & Delivery"
+            width={120}
+            height={120}
+            className={styles.logo}
+            priority
+          />
+        </div>
         <h1 className={styles.title}>Sistema de Pedidos</h1>
         
         <div className={styles.buttonContainer}>
