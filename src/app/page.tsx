@@ -44,6 +44,13 @@ export default function Home() {
           >
             Historial de Pedidos
           </button>
+          
+          <button 
+            onClick={() => router.push('/utilidades')}
+            className={styles.tertiaryButton}
+          >
+            Utilidades
+          </button>
         </div>
       </main>
     </div>
