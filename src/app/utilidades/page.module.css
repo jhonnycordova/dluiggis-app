@@ -91,6 +91,7 @@
 /* Cards de resumen */
 .summaryCards {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1.5rem;
   width: 100%;
@@ -106,8 +107,27 @@
   gap: 1rem;
   transition: transform 0.3s ease;
   min-height: 120px;
-  flex: 1;
+  flex: 1 1 calc(33.333% - 0.67rem);
+  min-width: 250px;
   box-sizing: border-box;
+}
+
+.summaryCard.profitCard {
+  background: linear-gradient(135deg, #228B22, #006400);
+  color: white;
+  box-shadow: 0 12px 40px rgba(34, 139, 34, 0.3);
+  border: 3px solid #32CD32;
+}
+
+.summaryCard.profitCard .cardContent h3,
+.summaryCard.profitCard .cardContent .cardValue {
+  color: white;
+}
+
+.summaryCard.profitCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 50px rgba(34, 139, 34, 0.4);
+  border-color: #00FF00;
 }
 
 .summaryCard:hover {
@@ -209,6 +229,7 @@
   border-radius: 16px;
   padding: 1.5rem;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
 }
 
 .tableContainer {
@@ -249,6 +270,15 @@
   font-weight: 600;
 }
 
+.expenseTag {
+  background: linear-gradient(135deg, #C41E3A, #8B0000);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
 /* Responsive design */
 @media (max-width: 768px) {
   .filters {
@@ -261,6 +291,15 @@
   
   .platformGrid {
     grid-template-columns: 1fr;
+  }
+  
+  .chartsGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .chartCard {
+    padding: 1rem;
   }
   
   .table {
@@ -281,4 +320,35 @@
   .platformGrid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* Sección de gráficos */
+.chartsSection {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.chartCard {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e0e0e0;
+}
+
+.chartCard h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 600;
+  text-align: center;
 } 

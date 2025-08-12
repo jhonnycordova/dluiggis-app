@@ -37,6 +37,13 @@ export default function Home() {
           >
             Registrar Pedido
           </button>
+
+          <button 
+            onClick={() => router.push('/registrar-gasto')}
+            className={styles.expenseButton}
+          >
+            Registrar Gasto
+          </button>
           
           <button 
             onClick={handleHistorialPedidos}
@@ -51,6 +58,7 @@ export default function Home() {
           >
             Utilidades
           </button>
+
         </div>
       </main>
     </div>
