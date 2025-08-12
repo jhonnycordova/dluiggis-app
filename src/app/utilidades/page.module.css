@@ -295,11 +295,16 @@
   
   .chartsGrid {
     grid-template-columns: 1fr;
-    gap: 1rem;
+    gap: 1.5rem;
   }
   
   .chartCard {
     padding: 1rem;
+    min-height: 350px;
+  }
+  
+  .chartContainer {
+    min-height: 250px;
   }
   
   .table {
@@ -309,6 +314,12 @@
   .table th,
   .table td {
     padding: 0.75rem 0.5rem;
+  }
+}
+
+@media (min-width: 1200px) {
+  .chartsGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
@@ -333,7 +344,7 @@
 
 .chartsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: 1fr;
   gap: 2rem;
   margin-top: 1.5rem;
 }
@@ -343,6 +354,9 @@
   border-radius: 12px;
   padding: 1.5rem;
   border: 1px solid #e0e0e0;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
 }
 
 .chartCard h3 {
@@ -351,4 +365,11 @@
   color: #333;
   font-weight: 600;
   text-align: center;
+  flex-shrink: 0;
+}
+
+.chartContainer {
+  flex: 1;
+  min-height: 300px;
+  width: 100%;
 } 

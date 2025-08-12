@@ -320,57 +320,63 @@ export default function Utilidades() {
             {/* Gráfico de barras por plataforma */}
             <div className={styles.chartCard}>
               <h3>Ingresos por Plataforma</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={getChartData()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => `$${formatAmount(Number(value))}`} />
-                  <Legend />
-                  <Bar dataKey="ingresos" fill="#228B22" name="Ingresos" />
-                  <Bar dataKey="comisiones" fill="#C41E3A" name="Comisiones" />
-                  <Bar dataKey="neto" fill="#FFD700" name="Neto" />
-                </BarChart>
-              </ResponsiveContainer>
+              <div className={styles.chartContainer}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={getChartData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `$${formatAmount(Number(value))}`} />
+                    <Legend />
+                    <Bar dataKey="ingresos" fill="#228B22" name="Ingresos" />
+                    <Bar dataKey="comisiones" fill="#C41E3A" name="Comisiones" />
+                    <Bar dataKey="neto" fill="#FFD700" name="Neto" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Gráfico de línea de ingresos diarios */}
             <div className={styles.chartCard}>
               <h3>Ingresos Netos - Últimos 7 Días</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={getRevenueLineData()}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => `$${formatAmount(Number(value))}`} />
-                  <Line type="monotone" dataKey="ingresos" stroke="#228B22" strokeWidth={3} name="Ingresos Netos" />
-                </LineChart>
-              </ResponsiveContainer>
+              <div className={styles.chartContainer}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={getRevenueLineData()}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => `$${formatAmount(Number(value))}`} />
+                    <Line type="monotone" dataKey="ingresos" stroke="#228B22" strokeWidth={3} name="Ingresos Netos" />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
             </div>
 
             {/* Gráfico de pie de egresos */}
             {filteredExpenses.length > 0 && (
               <div className={styles.chartCard}>
                 <h3>Distribución de Egresos</h3>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={getExpensePieData()}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {getExpensePieData().map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => `$${formatAmount(Number(value))}`} />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className={styles.chartContainer}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={getExpensePieData()}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {getExpensePieData().map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value) => `$${formatAmount(Number(value))}`} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             )}
           </div>
