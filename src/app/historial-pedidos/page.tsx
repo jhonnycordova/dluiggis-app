@@ -2,100 +2,116 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { ordersService } from '@/services/orders';
+import { Order } from '@/types';
+import { formatAmount } from '@/utils/calculations';
 import styles from './page.module.css';
-
-interface Order {
-  id: string;
-  platform: 'uber' | 'pedidosya' | 'whatsapp';
-  reference?: string;
-  amount: number;
-  commission?: number;
-  netAmount?: number;
-  paymentMethod?: string;
-  deliveryPerson?: string;
-  date: string;
-}
 
 export default function HistorialPedidos() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-    
-    // Migrate existing orders to add commission and netAmount fields if missing
-    const migratedOrders = savedOrders.map((order: Order) => {
-      let commission = 0;
-      
-      // Calculate commission if missing
-      if (order.commission === undefined) {
-        if (order.platform === 'uber' || order.platform === 'pedidosya') {
-          commission = order.amount * 0.36; // 36% for Uber and PedidosYa
-        } else if (order.platform === 'whatsapp' && order.paymentMethod === 'card') {
-          commission = order.amount * 0.02; // 2% for WhatsApp card payments
-        }
-        
-        if (commission > 0) {
-          return {
-            ...order,
-            commission: commission,
-            netAmount: order.amount - commission
-          };
-        }
-      }
-      
-      // Add netAmount if missing but commission exists
-      if (order.commission !== undefined && order.netAmount === undefined) {
-        return {
-          ...order,
-          netAmount: order.amount - order.commission
-        };
-      }
-      
-      return order;
-    });
-    
-    // Save migrated orders back to localStorage
-    localStorage.setItem('orders', JSON.stringify(migratedOrders));
-    setOrders(migratedOrders);
-    
-    // Set current date as default
-    const today = new Date();
-    const todayString = today.getFullYear() + '-' + 
-      String(today.getMonth() + 1).padStart(2, '0') + '-' + 
-      String(today.getDate()).padStart(2, '0');
-    setSelectedDate(todayString);
-    
-    // Apply filter for current date
-    const filtered = migratedOrders.filter((order: Order) => {
-      const orderDate = new Date(order.date);
-      const orderDateString = orderDate.getFullYear() + '-' + 
-        String(orderDate.getMonth() + 1).padStart(2, '0') + '-' + 
-        String(orderDate.getDate()).padStart(2, '0');
-      return orderDateString === todayString;
-    });
-    setFilteredOrders(filtered);
+    loadOrders();
   }, []);
+
+  const loadOrders = async () => {
+    try {
+      setIsLoading(true);
+      const allOrders = await ordersService.getAll();
+      setOrders(allOrders);
+      
+      console.log('Total de pedidos cargados:', allOrders.length);
+      
+      // Determine which date to show by default
+      const now = new Date();
+      const currentHour = now.getHours();
+      
+      // If it's early morning (before 6 AM), show yesterday's orders
+      // This handles the case where late night orders appear as next day in UTC
+      let defaultDate;
+      if (currentHour < 6) {
+        // Show yesterday's orders
+        const yesterday = new Date(now);
+        yesterday.setDate(yesterday.getDate() - 1);
+        defaultDate = yesterday;
+      } else {
+        // Show today's orders
+        defaultDate = now;
+      }
+      
+      const defaultDateString = defaultDate.getFullYear() + '-' + 
+        String(defaultDate.getMonth() + 1).padStart(2, '0') + '-' + 
+        String(defaultDate.getDate()).padStart(2, '0');
+      
+      setSelectedDate(defaultDateString);
+      console.log('Fecha por defecto seleccionada:', defaultDateString);
+      
+      // Apply filter for the default date
+      const filtered = allOrders.filter((order: Order) => {
+        const orderDate = new Date(order.fecha);
+        // Convert UTC date to local date for comparison
+        const localOrderDate = new Date(orderDate.getTime() - (orderDate.getTimezoneOffset() * 60000));
+        const orderDateString = localOrderDate.getFullYear() + '-' + 
+          String(localOrderDate.getMonth() + 1).padStart(2, '0') + '-' + 
+          String(localOrderDate.getDate()).padStart(2, '0');
+        
+        return orderDateString === defaultDateString;
+      });
+      
+      console.log('Pedidos de la fecha por defecto:', filtered.length);
+      setFilteredOrders(filtered);
+    } catch (error) {
+      console.error('Error al cargar pedidos:', error);
+      alert('Error al cargar los pedidos');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleBack = () => {
     router.push('/');
   };
 
-  const handleDateFilter = (date: string) => {
+  const handleDateFilter = async (date: string) => {
     setSelectedDate(date);
     if (!date) {
       setFilteredOrders(orders);
     } else {
-      const filtered = orders.filter(order => {
-        const orderDate = new Date(order.date);
-        const orderDateString = orderDate.getFullYear() + '-' + 
-          String(orderDate.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(orderDate.getDate()).padStart(2, '0');
-        return orderDateString === date;
-      });
-      setFilteredOrders(filtered);
+      try {
+        // For date filtering, we need to consider the full day in local timezone
+        const startDate = new Date(date + 'T00:00:00');
+        const endDate = new Date(date + 'T23:59:59');
+        
+        // Convert local dates to UTC for comparison with Supabase dates
+        const utcStartDate = new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000));
+        const utcEndDate = new Date(endDate.getTime() - (endDate.getTimezoneOffset() * 60000));
+        
+        console.log(`Filtrando por fecha: ${date}`);
+        console.log(`Rango local: ${startDate.toISOString()} - ${endDate.toISOString()}`);
+        console.log(`Rango UTC: ${utcStartDate.toISOString()} - ${utcEndDate.toISOString()}`);
+        
+        // Filter orders that fall within the local date range
+        const filtered = orders.filter(order => {
+          const orderDate = new Date(order.fecha);
+          const isInRange = orderDate >= utcStartDate && orderDate <= utcEndDate;
+          
+          if (isInRange) {
+            console.log(`Pedido ${order.id} incluido: ${order.fecha}`);
+          }
+          
+          return isInRange;
+        });
+        
+        console.log(`Pedidos encontrados para ${date}: ${filtered.length}`);
+        setFilteredOrders(filtered);
+      } catch (error) {
+        console.error('Error al filtrar por fecha:', error);
+        alert('Error al filtrar los pedidos');
+      }
     }
   };
 
@@ -110,9 +126,9 @@ export default function HistorialPedidos() {
 
   const getPaymentMethodName = (method: string) => {
     switch (method) {
-      case 'cash': return 'Efectivo';
-      case 'transfer': return 'Transferencia';
-      case 'card': return 'Tarjeta';
+      case 'efectivo': return 'Efectivo';
+      case 'transferencia': return 'Transferencia';
+      case 'tarjeta': return 'Tarjeta';
       default: return method;
     }
   };
@@ -139,22 +155,30 @@ export default function HistorialPedidos() {
 
   const calculateTotal = (orders: Order[]) => {
     return orders.reduce((total, order) => {
-      // Exclude commission from total calculation
-      const orderAmount = order.amount - (order.commission || 0);
+      const orderAmount = order.monto - (order.comision || 0);
       return total + orderAmount;
     }, 0);
   };
 
   const calculateTotalCommission = (orders: Order[]) => {
-    return orders.reduce((total, order) => total + (order.commission || 0), 0);
+    return orders.reduce((total, order) => total + (order.comision || 0), 0);
   };
 
-  const formatAmount = (amount: number) => {
-    return amount.toLocaleString('es-ES', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
-  };
+  if (isLoading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <button onClick={handleBack} className={styles.backButton}>
+            ← Volver
+          </button>
+          <h1 className={styles.title}>Historial de Pedidos</h1>
+        </div>
+        <div className={styles.content}>
+          <p>Cargando pedidos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -186,13 +210,10 @@ export default function HistorialPedidos() {
             )}
           </div>
           
-                      <div className={styles.summary}>
-              <p>Total de pedidos: {filteredOrders.length}</p>
-              <p>Total monto día: ${formatAmount(calculateTotal(filteredOrders))}</p>
-              {/* {calculateTotalCommission(filteredOrders) > 0 && (
-                <p>Total comisión día: ${formatAmount(calculateTotalCommission(filteredOrders))}</p>
-              )} */}
-            </div>
+          <div className={styles.summary}>
+            <p>Total de pedidos: {filteredOrders.length}</p>
+            <p>Total monto día: ${formatAmount(calculateTotal(filteredOrders))}</p>
+          </div>
         </div>
 
         <div className={styles.ordersContainer}>
@@ -206,30 +227,30 @@ export default function HistorialPedidos() {
                 <div key={order.id} className={styles.orderCard}>
                   <div className={styles.orderHeader}>
                     <div className={styles.platformBadge}>
-                      {getPlatformName(order.platform)}
+                      {getPlatformName(order.plataforma)}
                     </div>
                     <div className={styles.orderDate}>
-                      {formatDate(order.date)}
+                      {formatDate(order.fecha)}
                     </div>
                   </div>
                   
                   <div className={styles.orderDetails}>
                     <div className={styles.orderInfo}>
-                      <p><strong>Monto:</strong> ${formatAmount(order.amount)}</p>
-                      {order.commission && order.commission > 0 && (
-                        <p><strong>Comisión ({order.platform === 'whatsapp' ? '2%' : '36%'}):</strong> ${formatAmount(order.commission)}</p>
+                      <p><strong>Monto:</strong> ${formatAmount(order.monto)}</p>
+                      {order.comision && order.comision > 0 && (
+                        <p><strong>Comisión ({order.plataforma === 'whatsapp' ? '2%' : '36%'}):</strong> ${formatAmount(order.comision)}</p>
                       )}
-                      {order.netAmount && (order.platform === 'uber' || order.platform === 'pedidosya' || (order.platform === 'whatsapp' && order.paymentMethod === 'card')) && (
-                        <p><strong>Monto total:</strong> ${formatAmount(order.netAmount)}</p>
+                      {order.monto_neto && (order.plataforma === 'uber' || order.plataforma === 'pedidosya' || (order.plataforma === 'whatsapp' && order.metodo_pago === 'tarjeta')) && (
+                        <p><strong>Monto total:</strong> ${formatAmount(order.monto_neto)}</p>
                       )}
-                      {order.reference && (
-                        <p><strong>Referencia:</strong> {order.reference}</p>
+                      {order.referencia && (
+                        <p><strong>Referencia:</strong> {order.referencia}</p>
                       )}
-                      {order.paymentMethod && order.platform === 'whatsapp' && (
-                        <p><strong>Método de Pago:</strong> {getPaymentMethodName(order.paymentMethod)}</p>
+                      {order.metodo_pago && order.plataforma === 'whatsapp' && (
+                        <p><strong>Método de Pago:</strong> {getPaymentMethodName(order.metodo_pago)}</p>
                       )}
-                      {order.deliveryPerson && order.platform === 'whatsapp' && (
-                        <p><strong>Entrega:</strong> {getDeliveryPersonName(order.deliveryPerson)}</p>
+                      {order.persona_entrega && order.plataforma === 'whatsapp' && (
+                        <p><strong>Entrega:</strong> {getDeliveryPersonName(order.persona_entrega)}</p>
                       )}
                     </div>
                   </div>

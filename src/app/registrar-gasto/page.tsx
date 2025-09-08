@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { expensesService } from '@/services/expenses';
 import styles from './page.module.css';
 
 type ExpenseType = 'salario' | 'insumos' | 'otros';
@@ -9,29 +10,37 @@ type ExpenseType = 'salario' | 'insumos' | 'otros';
 export default function RegistrarGasto() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    type: 'salario' as ExpenseType,
-    concept: '',
-    amount: ''
+    tipo: 'salario' as ExpenseType,
+    concepto: '',
+    monto: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const expense = {
-      id: Date.now().toString(),
-      type: formData.type,
-      concept: formData.concept,
-      amount: parseFloat(formData.amount),
-      date: new Date().toISOString()
-    };
+    if (isSubmitting) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const expenseData = {
+        fecha: new Date().toISOString(),
+        tipo: formData.tipo,
+        concepto: formData.concepto,
+        monto: parseFloat(formData.monto)
+      };
 
-    // Save to localStorage
-    const existingExpenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-    existingExpenses.push(expense);
-    localStorage.setItem('expenses', JSON.stringify(existingExpenses));
-
-    alert('Gasto registrado exitosamente!');
-    router.push('/');
+      await expensesService.create(expenseData);
+      
+      alert('Gasto registrado exitosamente!');
+      router.push('/');
+    } catch (error) {
+      console.error('Error al registrar gasto:', error);
+      alert('Error al registrar el gasto. Inténtalo de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -60,11 +69,11 @@ export default function RegistrarGasto() {
         <div className={styles.formContainer}>
           <form onSubmit={handleSubmit} className={styles.form}>
             <div className={styles.formGroup}>
-              <label htmlFor="type">Tipo de Gasto:</label>
+              <label htmlFor="tipo">Tipo de Gasto:</label>
               <select
-                id="type"
-                value={formData.type}
-                onChange={(e) => handleInputChange('type', e.target.value)}
+                id="tipo"
+                value={formData.tipo}
+                onChange={(e) => handleInputChange('tipo', e.target.value)}
                 className={styles.select}
                 required
               >
@@ -75,12 +84,12 @@ export default function RegistrarGasto() {
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="concept">Concepto:</label>
+              <label htmlFor="concepto">Concepto:</label>
               <input
                 type="text"
-                id="concept"
-                value={formData.concept}
-                onChange={(e) => handleInputChange('concept', e.target.value)}
+                id="concepto"
+                value={formData.concepto}
+                onChange={(e) => handleInputChange('concepto', e.target.value)}
                 required
                 className={styles.input}
                 placeholder="Descripción del gasto"
@@ -88,13 +97,13 @@ export default function RegistrarGasto() {
             </div>
 
             <div className={styles.formGroup}>
-              <label htmlFor="amount">Monto:</label>
+              <label htmlFor="monto">Monto:</label>
               <input
                 type="number"
-                id="amount"
+                id="monto"
                 step="0.01"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
+                value={formData.monto}
+                onChange={(e) => handleInputChange('monto', e.target.value)}
                 required
                 className={styles.input}
                 placeholder="0.00"
@@ -105,8 +114,12 @@ export default function RegistrarGasto() {
               <button type="button" onClick={() => router.push('/')} className={styles.cancelButton}>
                 Cancelar
               </button>
-              <button type="submit" className={styles.submitButton}>
-                Registrar Gasto
+              <button 
+                type="submit" 
+                className={styles.submitButton}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Registrando...' : 'Registrar Gasto'}
               </button>
             </div>
           </form>

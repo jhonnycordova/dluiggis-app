@@ -3,27 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { ordersService } from '@/services/orders';
+import { expensesService } from '@/services/expenses';
+import { Order, Expense } from '@/types';
+import { formatAmount } from '@/utils/calculations';
 import styles from './page.module.css';
-
-interface Order {
-  id: string;
-  platform: 'uber' | 'pedidosya' | 'whatsapp';
-  reference?: string;
-  amount: number;
-  commission?: number;
-  netAmount?: number;
-  paymentMethod?: string;
-  deliveryPerson?: string;
-  date: string;
-}
-
-interface Expense {
-  id: string;
-  type: 'salario' | 'insumos' | 'otros';
-  concept: string;
-  amount: number;
-  date: string;
-}
 
 interface FinancialSummary {
   totalOrders: number;
@@ -43,6 +27,7 @@ export default function Utilidades() {
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
+  const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalOrders: 0,
     totalRevenue: 0,
@@ -54,35 +39,64 @@ export default function Utilidades() {
   });
 
   useEffect(() => {
-    const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-    const savedExpenses = JSON.parse(localStorage.getItem('expenses') || '[]');
-    setOrders(savedOrders);
-    setExpenses(savedExpenses);
-    applyFilters(selectedYear, selectedMonth, savedOrders, savedExpenses);
+    loadData();
   }, [selectedYear, selectedMonth]);
 
-  const applyFilters = (year: number, month: number, allOrders: Order[], allExpenses: Expense[]) => {
-    const filteredOrders = allOrders.filter(order => {
-      const orderDate = new Date(order.date);
-      return orderDate.getFullYear() === year && orderDate.getMonth() === month;
-    });
-    
-    const filteredExpenses = allExpenses.filter(expense => {
-      const expenseDate = new Date(expense.date);
-      return expenseDate.getFullYear() === year && expenseDate.getMonth() === month;
-    });
-    
-    setFilteredOrders(filteredOrders);
-    setFilteredExpenses(filteredExpenses);
-    calculateSummary(filteredOrders, filteredExpenses);
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const [allOrders, allExpenses] = await Promise.all([
+        ordersService.getAll(),
+        expensesService.getAll()
+      ]);
+      
+      setOrders(allOrders);
+      setExpenses(allExpenses);
+      applyFilters(selectedYear, selectedMonth, allOrders, allExpenses);
+    } catch (error) {
+      console.error('Error al cargar datos:', error);
+      alert('Error al cargar los datos');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const applyFilters = async (year: number, month: number, allOrders: Order[], allExpenses: Expense[]) => {
+    try {
+      // For month filtering, we need to consider the full month in local timezone
+      const startDate = new Date(year, month, 1);
+      const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
+      
+      // Convert local dates to UTC for Supabase query
+      const utcStartDate = new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000));
+      const utcEndDate = new Date(endDate.getTime() - (endDate.getTimezoneOffset() * 60000));
+      
+      // Filter orders and expenses that fall within the local month range
+      const filteredOrders = allOrders.filter(order => {
+        const orderDate = new Date(order.fecha);
+        return orderDate >= utcStartDate && orderDate <= utcEndDate;
+      });
+      
+      const filteredExpenses = allExpenses.filter(expense => {
+        const expenseDate = new Date(expense.fecha);
+        return expenseDate >= utcStartDate && expenseDate <= utcEndDate;
+      });
+      
+      setFilteredOrders(filteredOrders);
+      setFilteredExpenses(filteredExpenses);
+      calculateSummary(filteredOrders, filteredExpenses);
+    } catch (error) {
+      console.error('Error al aplicar filtros:', error);
+      alert('Error al filtrar los datos');
+    }
   };
 
   const calculateSummary = (orders: Order[], expenses: Expense[]) => {
     const totalOrders = orders.length;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.amount, 0);
-    const totalCommissions = orders.reduce((sum, order) => sum + (order.commission || 0), 0);
+    const totalRevenue = orders.reduce((sum, order) => sum + order.monto, 0);
+    const totalCommissions = orders.reduce((sum, order) => sum + (order.comision || 0), 0);
     const netRevenue = totalRevenue - totalCommissions;
-    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+    const totalExpenses = expenses.reduce((sum, expense) => sum + expense.monto, 0);
     const finalProfit = netRevenue - totalExpenses;
 
     setSummary({
@@ -92,7 +106,7 @@ export default function Utilidades() {
       netRevenue,
       totalExpenses,
       finalProfit,
-      averageOrderValue: 0
+      averageOrderValue: totalOrders > 0 ? netRevenue / totalOrders : 0
     });
   };
 
@@ -116,20 +130,13 @@ export default function Utilidades() {
     };
 
     filteredOrders.forEach(order => {
-      stats[order.platform].orders++;
-      stats[order.platform].revenue += order.amount;
-      stats[order.platform].commissions += order.commission || 0;
-      stats[order.platform].netRevenue += (order.amount - (order.commission || 0));
+      stats[order.plataforma].orders++;
+      stats[order.plataforma].revenue += order.monto;
+      stats[order.plataforma].commissions += order.comision || 0;
+      stats[order.plataforma].netRevenue += (order.monto - (order.comision || 0));
     });
 
     return stats;
-  };
-
-  const formatAmount = (amount: number) => {
-    return amount.toLocaleString('es-ES', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    });
   };
 
   const getYearOptions = () => {
@@ -159,7 +166,7 @@ export default function Utilidades() {
     };
 
     filteredExpenses.forEach(expense => {
-      expenseTypes[expense.type].value += expense.amount;
+      expenseTypes[expense.tipo].value += expense.monto;
     });
 
     return Object.values(expenseTypes).filter(item => item.value > 0);
@@ -173,17 +180,41 @@ export default function Utilidades() {
       date.setDate(date.getDate() - i);
       const dayString = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
       
+      // Create local date range for the day
+      const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
+      
+      // Convert to UTC for comparison with Supabase dates
+      const utcStartOfDay = new Date(startOfDay.getTime() - (startOfDay.getTimezoneOffset() * 60000));
+      const utcEndOfDay = new Date(endOfDay.getTime() - (endOfDay.getTimezoneOffset() * 60000));
+      
       const dayOrders = filteredOrders.filter(order => {
-        const orderDate = new Date(order.date);
-        return orderDate.toDateString() === date.toDateString();
+        const orderDate = new Date(order.fecha);
+        return orderDate >= utcStartOfDay && orderDate <= utcEndOfDay;
       });
       
-      const dayRevenue = dayOrders.reduce((sum, order) => sum + (order.amount - (order.commission || 0)), 0);
+      const dayRevenue = dayOrders.reduce((sum, order) => sum + (order.monto - (order.comision || 0)), 0);
       
       days.push({ name: dayString, ingresos: dayRevenue });
     }
     return days;
   };
+
+  if (isLoading) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <button onClick={handleBack} className={styles.backButton}>
+            ← Volver
+          </button>
+          <h1 className={styles.title}>Dashboard de Utilidades</h1>
+        </div>
+        <div className={styles.content}>
+          <p>Cargando datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>
@@ -399,16 +430,16 @@ export default function Utilidades() {
               <tbody>
                 {filteredOrders.map((order) => (
                   <tr key={order.id}>
-                    <td>{new Date(order.date).toLocaleDateString('es-ES')}</td>
+                    <td>{new Date(order.fecha).toLocaleDateString('es-ES')}</td>
                     <td>
                       <span className={styles.platformTag}>
-                        {order.platform === 'uber' ? '🚗 Uber' : 
-                         order.platform === 'pedidosya' ? '🍕 PedidosYa' : '📱 WhatsApp'}
+                        {order.plataforma === 'uber' ? '🚗 Uber' : 
+                         order.plataforma === 'pedidosya' ? '🍕 PedidosYa' : '📱 WhatsApp'}
                       </span>
                     </td>
-                    <td>${formatAmount(order.amount)}</td>
-                    <td>${formatAmount(order.commission || 0)}</td>
-                    <td>${formatAmount(order.netAmount || order.amount)}</td>
+                    <td>${formatAmount(order.monto)}</td>
+                    <td>${formatAmount(order.comision || 0)}</td>
+                    <td>${formatAmount(order.monto_neto || order.monto)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -433,15 +464,15 @@ export default function Utilidades() {
                 <tbody>
                   {filteredExpenses.map((expense) => (
                     <tr key={expense.id}>
-                      <td>{new Date(expense.date).toLocaleDateString('es-ES')}</td>
+                      <td>{new Date(expense.fecha).toLocaleDateString('es-ES')}</td>
                       <td>
                         <span className={styles.expenseTag}>
-                          {expense.type === 'salario' ? '👷 Salario' : 
-                           expense.type === 'insumos' ? '🥬 Insumos' : '📦 Otros'}
+                          {expense.tipo === 'salario' ? '👷 Salario' : 
+                           expense.tipo === 'insumos' ? '🥬 Insumos' : '📦 Otros'}
                         </span>
                       </td>
-                      <td>{expense.concept}</td>
-                      <td>${formatAmount(expense.amount)}</td>
+                      <td>{expense.concepto}</td>
+                      <td>${formatAmount(expense.monto)}</td>
                     </tr>
                   ))}
                 </tbody>

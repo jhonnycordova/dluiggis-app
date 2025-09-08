@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ordersService } from '@/services/orders';
+import { calculateCommission, calculateNetAmount } from '@/utils/calculations';
 import styles from './page.module.css';
 
 type Platform = 'uber' | 'pedidosya' | 'whatsapp' | null;
@@ -9,6 +11,7 @@ type Platform = 'uber' | 'pedidosya' | 'whatsapp' | null;
 export default function RegistrarPedido() {
   const router = useRouter();
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleBack = () => {
     router.push('/');
@@ -58,7 +61,12 @@ export default function RegistrarPedido() {
             </div>
           </div>
         ) : (
-          <OrderForm platform={selectedPlatform} onBack={() => setSelectedPlatform(null)} />
+          <OrderForm 
+            platform={selectedPlatform} 
+            onBack={() => setSelectedPlatform(null)}
+            isSubmitting={isSubmitting}
+            setIsSubmitting={setIsSubmitting}
+          />
         )}
       </div>
     </div>
@@ -68,48 +76,52 @@ export default function RegistrarPedido() {
 interface OrderFormProps {
   platform: Platform;
   onBack: () => void;
+  isSubmitting: boolean;
+  setIsSubmitting: (value: boolean) => void;
 }
 
-function OrderForm({ platform, onBack }: OrderFormProps) {
+function OrderForm({ platform, onBack, isSubmitting, setIsSubmitting }: OrderFormProps) {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    reference: '',
-    amount: '',
-    paymentMethod: 'cash',
-    deliveryPerson: 'none'
+    referencia: '',
+    monto: '',
+    metodo_pago: 'efectivo',
+    persona_entrega: 'none'
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const amount = parseFloat(formData.amount);
-    let commission = 0;
+    if (isSubmitting) return;
     
-    if (platform === 'uber' || platform === 'pedidosya') {
-      commission = amount * 0.36; // 36% for Uber and PedidosYa
-    } else if (platform === 'whatsapp' && formData.paymentMethod === 'card') {
-      commission = amount * 0.02; // 2% for WhatsApp card payments
+    setIsSubmitting(true);
+    
+    try {
+      const monto = parseFloat(formData.monto);
+      const comision = calculateCommission(platform!, monto, formData.metodo_pago);
+      const monto_neto = calculateNetAmount(monto, comision);
+      
+      const orderData = {
+        fecha: new Date().toISOString(),
+        plataforma: platform!,
+        referencia: formData.referencia || undefined,
+        monto: monto,
+        comision: comision > 0 ? comision : undefined,
+        monto_neto: comision > 0 ? monto_neto : undefined,
+        metodo_pago: platform === 'whatsapp' ? formData.metodo_pago : undefined,
+        persona_entrega: platform === 'whatsapp' ? formData.persona_entrega : undefined
+      };
+
+      await ordersService.create(orderData);
+      
+      alert('Pedido registrado exitosamente!');
+      router.push('/');
+    } catch (error) {
+      console.error('Error al registrar pedido:', error);
+      alert('Error al registrar el pedido. Inténtalo de nuevo.');
+    } finally {
+      setIsSubmitting(false);
     }
-    
-    const netAmount = commission > 0 ? amount - commission : amount;
-    
-    const order = {
-      id: Date.now().toString(),
-      platform,
-      ...formData,
-      date: new Date().toISOString(),
-      amount: amount,
-      ...(commission > 0 && { commission: commission }),
-      ...(commission > 0 && { netAmount: netAmount })
-    };
-
-    // Save to localStorage
-    const existingOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-    existingOrders.push(order);
-    localStorage.setItem('orders', JSON.stringify(existingOrders));
-
-    alert('Pedido registrado exitosamente!');
-    router.push('/');
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -138,24 +150,24 @@ function OrderForm({ platform, onBack }: OrderFormProps) {
         {platform === 'uber' && (
           <>
             <div className={styles.formGroup}>
-              <label htmlFor="reference">Referencia:</label>
+              <label htmlFor="referencia">Referencia:</label>
               <input
                 type="text"
-                id="reference"
-                value={formData.reference}
-                onChange={(e) => handleInputChange('reference', e.target.value)}
+                id="referencia"
+                value={formData.referencia}
+                onChange={(e) => handleInputChange('referencia', e.target.value)}
                 className={styles.input}
               />
             </div>
             
             <div className={styles.formGroup}>
-              <label htmlFor="amount">Monto:</label>
+              <label htmlFor="monto">Monto:</label>
               <input
                 type="number"
-                id="amount"
+                id="monto"
                 step="0.01"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
+                value={formData.monto}
+                onChange={(e) => handleInputChange('monto', e.target.value)}
                 required
                 className={styles.input}
               />
@@ -166,25 +178,25 @@ function OrderForm({ platform, onBack }: OrderFormProps) {
         {platform === 'pedidosya' && (
           <>
             <div className={styles.formGroup}>
-              <label htmlFor="reference">Referencia:</label>
+              <label htmlFor="referencia">Referencia:</label>
               <input
                 type="text"
-                id="reference"
-                value={formData.reference}
-                onChange={(e) => handleInputChange('reference', e.target.value)}
+                id="referencia"
+                value={formData.referencia}
+                onChange={(e) => handleInputChange('referencia', e.target.value)}
                 required
                 className={styles.input}
               />
             </div>
             
             <div className={styles.formGroup}>
-              <label htmlFor="amount">Monto:</label>
+              <label htmlFor="monto">Monto:</label>
               <input
                 type="number"
-                id="amount"
+                id="monto"
                 step="0.01"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
+                value={formData.monto}
+                onChange={(e) => handleInputChange('monto', e.target.value)}
                 required
                 className={styles.input}
               />
@@ -195,40 +207,40 @@ function OrderForm({ platform, onBack }: OrderFormProps) {
         {platform === 'whatsapp' && (
           <>
             <div className={styles.formGroup}>
-              <label htmlFor="amount">Monto:</label>
+              <label htmlFor="monto">Monto:</label>
               <input
                 type="number"
-                id="amount"
+                id="monto"
                 step="0.01"
-                value={formData.amount}
-                onChange={(e) => handleInputChange('amount', e.target.value)}
+                value={formData.monto}
+                onChange={(e) => handleInputChange('monto', e.target.value)}
                 required
                 className={styles.input}
               />
             </div>
             
             <div className={styles.formGroup}>
-              <label htmlFor="paymentMethod">Método de Pago:</label>
+              <label htmlFor="metodo_pago">Método de Pago:</label>
               <select
-                id="paymentMethod"
-                value={formData.paymentMethod}
-                onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                id="metodo_pago"
+                value={formData.metodo_pago}
+                onChange={(e) => handleInputChange('metodo_pago', e.target.value)}
                 className={styles.select}
               >
-                <option value="cash">Efectivo</option>
-                <option value="transfer">Transferencia</option>
-                <option value="card">Tarjeta</option>
+                <option value="efectivo">Efectivo</option>
+                <option value="transferencia">Transferencia</option>
+                <option value="tarjeta">Tarjeta</option>
               </select>
             </div>
             
-            {formData.paymentMethod === 'card' && (
+            {formData.metodo_pago === 'tarjeta' && (
               <div className={styles.formGroup}>
-                <label htmlFor="reference">Referencia:</label>
+                <label htmlFor="referencia">Referencia:</label>
                 <input
                   type="text"
-                  id="reference"
-                  value={formData.reference}
-                  onChange={(e) => handleInputChange('reference', e.target.value)}
+                  id="referencia"
+                  value={formData.referencia}
+                  onChange={(e) => handleInputChange('referencia', e.target.value)}
                   required
                   className={styles.input}
                 />
@@ -236,11 +248,11 @@ function OrderForm({ platform, onBack }: OrderFormProps) {
             )}
             
             <div className={styles.formGroup}>
-              <label htmlFor="deliveryPerson">Entrega:</label>
+              <label htmlFor="persona_entrega">Entrega:</label>
               <select
-                id="deliveryPerson"
-                value={formData.deliveryPerson}
-                onChange={(e) => handleInputChange('deliveryPerson', e.target.value)}
+                id="persona_entrega"
+                value={formData.persona_entrega}
+                onChange={(e) => handleInputChange('persona_entrega', e.target.value)}
                 className={styles.select}
               >
                 <option value="none">Sin entrega</option>
@@ -255,8 +267,12 @@ function OrderForm({ platform, onBack }: OrderFormProps) {
           <button type="button" onClick={onBack} className={styles.cancelButton}>
             Cancelar
           </button>
-          <button type="submit" className={styles.submitButton}>
-            Registrar Pedido
+          <button 
+            type="submit" 
+            className={styles.submitButton}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Registrando...' : 'Registrar Pedido'}
           </button>
         </div>
       </form>
