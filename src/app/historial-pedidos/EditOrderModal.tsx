@@ -106,32 +106,23 @@ export default function EditOrderModal({
       formData.plataforma === 'whatsapp' ? formData.persona_entrega : undefined
     )
 
-    const updatedData: any = {
+    const updatedData: Partial<Order> = {
       plataforma: formData.plataforma,
       referencia: formData.referencia || undefined,
       monto: monto,
       metodo_pago: formData.plataforma === 'whatsapp' ? formData.metodo_pago : undefined,
       persona_entrega: formData.plataforma === 'whatsapp' ? formData.persona_entrega : undefined,
       tipo_tarjeta: formData.plataforma === 'whatsapp' && formData.metodo_pago === 'tarjeta'
-        ? formData.tipo_tarjeta
-        : null,
-      pagado_efectivo: formData.plataforma === 'pedidosya' ? formData.pagado_efectivo : null
+        ? (formData.tipo_tarjeta as 'debito' | 'credito')
+        : undefined,
+      pagado_efectivo: formData.plataforma === 'pedidosya' ? formData.pagado_efectivo : undefined
     }
 
     // Always set commission and net amount
-    updatedData.comision = comision > 0 ? comision : null
+    updatedData.comision = comision > 0 ? comision : undefined
     updatedData.monto_neto = monto_neto
 
     await onSave(updatedData)
-  }
-
-  const getPlatformName = (platform: string) => {
-    const names: { [key: string]: string } = {
-      uber: 'Uber',
-      pedidosya: 'PedidosYa',
-      whatsapp: 'WhatsApp'
-    }
-    return names[platform] || platform
   }
 
   const formatCurrency = (amount: number) => {

@@ -1,5 +1,3 @@
-import { Order } from '@/types'
-
 export const calculateCommission = (
   platform: string,
   amount: number,

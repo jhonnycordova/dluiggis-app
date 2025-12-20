@@ -169,11 +169,7 @@ export default function HistorialPedidos() {
   };
 
   const calculateTotal = (orders: Order[]) => {
-    return orders.reduce((total, order) => total + order.monto_neto, 0);
-  };
-
-  const calculateTotalCommission = (orders: Order[]) => {
-    return orders.reduce((total, order) => total + (order.comision || 0), 0);
+    return orders.reduce((total, order) => total + (order.monto_neto || 0), 0);
   };
 
   const getPlatformStatistics = (orders: Order[]) => {
@@ -184,7 +180,7 @@ export default function HistorialPedidos() {
     };
 
     orders.forEach(order => {
-      const orderAmount = order.monto_neto;
+      const orderAmount = order.monto_neto || 0;
 
       switch (order.plataforma) {
         case 'uber':
@@ -398,7 +394,7 @@ export default function HistorialPedidos() {
                         }):</strong> ${formatAmount(order.comision)}</p>
                       )}
                       {(order.plataforma === 'uber' || order.plataforma === 'pedidosya' || (order.plataforma === 'whatsapp' && order.metodo_pago === 'tarjeta') || order.persona_entrega === 'josue') && (
-                        <p><strong>Monto neto:</strong> ${formatAmount(order.monto_neto)}</p>
+                        <p><strong>Monto neto:</strong> ${formatAmount(order.monto_neto || 0)}</p>
                       )}
                       {order.referencia && (
                         <p><strong>Referencia:</strong> {order.referencia}</p>

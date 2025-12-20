@@ -47,15 +47,6 @@ export default function RegistrarGasto() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const getExpenseTypeName = (type: ExpenseType) => {
-    switch (type) {
-      case 'salario': return 'Salario';
-      case 'insumos': return 'Insumos';
-      case 'otros': return 'Otros';
-      default: return '';
-    }
-  };
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>

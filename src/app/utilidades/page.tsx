@@ -21,8 +21,6 @@ interface FinancialSummary {
 
 export default function Utilidades() {
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -38,10 +36,6 @@ export default function Utilidades() {
     averageOrderValue: 0
   });
 
-  useEffect(() => {
-    loadData();
-  }, [selectedYear, selectedMonth]);
-
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -49,9 +43,7 @@ export default function Utilidades() {
         ordersService.getAll(),
         expensesService.getAll()
       ]);
-      
-      setOrders(allOrders);
-      setExpenses(allExpenses);
+
       applyFilters(selectedYear, selectedMonth, allOrders, allExpenses);
     } catch (error) {
       console.error('Error al cargar datos:', error);
@@ -60,6 +52,11 @@ export default function Utilidades() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedYear, selectedMonth]);
 
   const applyFilters = async (year: number, month: number, allOrders: Order[], allExpenses: Expense[]) => {
     try {
@@ -97,7 +94,7 @@ export default function Utilidades() {
     const totalCommissions = orders.reduce((sum, order) => sum + (order.comision || 0), 0);
 
     // Siempre usar monto_neto (ahora siempre existe)
-    const netRevenue = orders.reduce((sum, order) => sum + order.monto_neto, 0);
+    const netRevenue = orders.reduce((sum, order) => sum + (order.monto_neto || 0), 0);
 
     const totalExpenses = expenses.reduce((sum, expense) => sum + expense.monto, 0);
     const finalProfit = netRevenue - totalExpenses;
@@ -136,7 +133,7 @@ export default function Utilidades() {
       stats[order.plataforma].orders++;
       stats[order.plataforma].revenue += order.monto;
       stats[order.plataforma].commissions += order.comision || 0;
-      stats[order.plataforma].netRevenue += order.monto_neto;
+      stats[order.plataforma].netRevenue += order.monto_neto || 0;
     });
 
     return stats;
@@ -196,7 +193,7 @@ export default function Utilidades() {
         return orderDate >= utcStartOfDay && orderDate <= utcEndOfDay;
       });
 
-      const dayRevenue = dayOrders.reduce((sum, order) => sum + order.monto_neto, 0);
+      const dayRevenue = dayOrders.reduce((sum, order) => sum + (order.monto_neto || 0), 0);
 
       days.push({ name: dayString, ingresos: dayRevenue });
     }
@@ -442,7 +439,7 @@ export default function Utilidades() {
                     </td>
                     <td>${formatAmount(order.monto)}</td>
                     <td>${formatAmount(order.comision || 0)}</td>
-                    <td>${formatAmount(order.monto_neto)}</td>
+                    <td>${formatAmount(order.monto_neto || 0)}</td>
                   </tr>
                 ))}
               </tbody>

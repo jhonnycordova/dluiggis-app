@@ -116,7 +116,7 @@ function OrderForm({ platform, onBack, isSubmitting, setIsSubmitting }: OrderFor
         monto_neto: monto_neto,
         metodo_pago: platform === 'whatsapp' ? formData.metodo_pago : undefined,
         persona_entrega: platform === 'whatsapp' ? formData.persona_entrega : undefined,
-        tipo_tarjeta: platform === 'whatsapp' && formData.metodo_pago === 'tarjeta' ? formData.tipo_tarjeta : undefined,
+        tipo_tarjeta: platform === 'whatsapp' && formData.metodo_pago === 'tarjeta' ? (formData.tipo_tarjeta as 'debito' | 'credito') : undefined,
         pagado_efectivo: platform === 'pedidosya' ? formData.pagado_efectivo : undefined
       };
 
