@@ -8,6 +8,8 @@ export interface Order {
   monto_neto?: number;
   metodo_pago?: string;
   persona_entrega?: string;
+  tipo_tarjeta?: 'debito' | 'credito';
+  pagado_efectivo?: boolean;
 }
 
 export interface Expense {
@@ -28,6 +30,8 @@ export interface DatabaseOrder {
   monto_neto?: number;
   metodo_pago?: string;
   persona_entrega?: string;
+  tipo_tarjeta?: 'debito' | 'credito';
+  pagado_efectivo?: boolean;
 }
 
 export interface DatabaseExpense {

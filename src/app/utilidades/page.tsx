@@ -95,7 +95,10 @@ export default function Utilidades() {
     const totalOrders = orders.length;
     const totalRevenue = orders.reduce((sum, order) => sum + order.monto, 0);
     const totalCommissions = orders.reduce((sum, order) => sum + (order.comision || 0), 0);
-    const netRevenue = totalRevenue - totalCommissions;
+
+    // Siempre usar monto_neto (ahora siempre existe)
+    const netRevenue = orders.reduce((sum, order) => sum + order.monto_neto, 0);
+
     const totalExpenses = expenses.reduce((sum, expense) => sum + expense.monto, 0);
     const finalProfit = netRevenue - totalExpenses;
 
@@ -133,7 +136,7 @@ export default function Utilidades() {
       stats[order.plataforma].orders++;
       stats[order.plataforma].revenue += order.monto;
       stats[order.plataforma].commissions += order.comision || 0;
-      stats[order.plataforma].netRevenue += (order.monto - (order.comision || 0));
+      stats[order.plataforma].netRevenue += order.monto_neto;
     });
 
     return stats;
@@ -192,9 +195,9 @@ export default function Utilidades() {
         const orderDate = new Date(order.fecha);
         return orderDate >= utcStartOfDay && orderDate <= utcEndOfDay;
       });
-      
-      const dayRevenue = dayOrders.reduce((sum, order) => sum + (order.monto - (order.comision || 0)), 0);
-      
+
+      const dayRevenue = dayOrders.reduce((sum, order) => sum + order.monto_neto, 0);
+
       days.push({ name: dayString, ingresos: dayRevenue });
     }
     return days;
@@ -439,7 +442,7 @@ export default function Utilidades() {
                     </td>
                     <td>${formatAmount(order.monto)}</td>
                     <td>${formatAmount(order.comision || 0)}</td>
-                    <td>${formatAmount(order.monto_neto || order.monto)}</td>
+                    <td>${formatAmount(order.monto_neto)}</td>
                   </tr>
                 ))}
               </tbody>

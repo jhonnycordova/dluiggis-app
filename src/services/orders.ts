@@ -54,5 +54,26 @@ export const ordersService = {
 
     if (error) throw error
     return data || []
+  },
+
+  async update(id: string, data: Partial<Omit<Order, 'id'>>): Promise<Order> {
+    const { data: updated, error } = await supabase
+      .from('pedidos')
+      .update(data)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return updated
+  },
+
+  async delete(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('pedidos')
+      .delete()
+      .eq('id', id)
+
+    if (error) throw error
   }
 }

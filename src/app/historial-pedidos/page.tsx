@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { ordersService } from '@/services/orders';
 import { Order } from '@/types';
 import { formatAmount } from '@/utils/calculations';
+import Notification from './Notification';
+import DeleteConfirmModal from './DeleteConfirmModal';
+import EditOrderModal from './EditOrderModal';
 import styles from './page.module.css';
 
 export default function HistorialPedidos() {
@@ -13,6 +16,10 @@ export default function HistorialPedidos() {
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingOrderId, setDeletingOrderId] = useState<string | null>(null);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     loadOrders();
@@ -142,6 +149,14 @@ export default function HistorialPedidos() {
     }
   };
 
+  const getCardTypeName = (tipo: string) => {
+    switch (tipo) {
+      case 'debito': return 'Débito';
+      case 'credito': return 'Crédito';
+      default: return tipo;
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
@@ -154,14 +169,104 @@ export default function HistorialPedidos() {
   };
 
   const calculateTotal = (orders: Order[]) => {
-    return orders.reduce((total, order) => {
-      const orderAmount = order.monto - (order.comision || 0);
-      return total + orderAmount;
-    }, 0);
+    return orders.reduce((total, order) => total + order.monto_neto, 0);
   };
 
   const calculateTotalCommission = (orders: Order[]) => {
     return orders.reduce((total, order) => total + (order.comision || 0), 0);
+  };
+
+  const getPlatformStatistics = (orders: Order[]) => {
+    const stats = {
+      uber: { count: 0, total: 0 },
+      pedidosya: { count: 0, total: 0, efectivo: 0, efectivoTotal: 0 },
+      whatsapp: { count: 0, total: 0 }
+    };
+
+    orders.forEach(order => {
+      const orderAmount = order.monto_neto;
+
+      switch (order.plataforma) {
+        case 'uber':
+          stats.uber.count++;
+          stats.uber.total += orderAmount;
+          break;
+        case 'pedidosya':
+          if (order.pagado_efectivo === true) {
+            // Count ONLY in efectivo
+            stats.pedidosya.efectivo++;
+            stats.pedidosya.efectivoTotal += orderAmount;
+          } else {
+            // Count ONLY in regular PedidosYa
+            stats.pedidosya.count++;
+            stats.pedidosya.total += orderAmount;
+          }
+          break;
+        case 'whatsapp':
+          stats.whatsapp.count++;
+          stats.whatsapp.total += orderAmount;
+          break;
+      }
+    });
+
+    return stats;
+  };
+
+  const handleDeleteClick = (order: Order) => {
+    setDeletingOrderId(order.id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingOrderId) return;
+
+    setActionLoading(deletingOrderId);
+    try {
+      await ordersService.delete(deletingOrderId);
+
+      // Update local state
+      setOrders(prev => prev.filter(o => o.id !== deletingOrderId));
+      setFilteredOrders(prev => prev.filter(o => o.id !== deletingOrderId));
+
+      setNotification({ type: 'success', message: 'Pedido eliminado exitosamente' });
+      setDeletingOrderId(null);
+    } catch (error) {
+      console.error('Error al eliminar pedido:', error);
+      setNotification({ type: 'error', message: 'Error al eliminar el pedido. Inténtalo de nuevo.' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleEditClick = (order: Order) => {
+    setEditingOrder(order);
+  };
+
+  const handleEditSave = async (updatedData: Partial<Order>) => {
+    if (!editingOrder) return;
+
+    setActionLoading(editingOrder.id);
+    try {
+      const updated = await ordersService.update(editingOrder.id, updatedData);
+
+      // Update local state
+      setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+      setFilteredOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+
+      setNotification({ type: 'success', message: 'Pedido actualizado exitosamente' });
+      setEditingOrder(null);
+    } catch (error) {
+      console.error('Error al actualizar pedido:', error);
+      setNotification({ type: 'error', message: 'Error al actualizar el pedido. Inténtalo de nuevo.' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleModalCancel = () => {
+    if (!actionLoading) {
+      setDeletingOrderId(null);
+      setEditingOrder(null);
+    }
   };
 
   if (isLoading) {
@@ -209,10 +314,57 @@ export default function HistorialPedidos() {
               </button>
             )}
           </div>
-          
-          <div className={styles.summary}>
-            <p>Total de pedidos: {filteredOrders.length}</p>
-            <p>Total monto día: ${formatAmount(calculateTotal(filteredOrders))}</p>
+
+          <div className={styles.summarySection}>
+            <div className={styles.totalSummary}>
+              <p><strong>Total de pedidos:</strong> {filteredOrders.length}</p>
+              <p><strong>Total monto día:</strong> ${formatAmount(calculateTotal(filteredOrders))}</p>
+            </div>
+
+            <div className={styles.platformStats}>
+              {(() => {
+                const stats = getPlatformStatistics(filteredOrders);
+                return (
+                  <>
+                    <div className={styles.statCard}>
+                      <div className={styles.statIcon}>🚗</div>
+                      <div className={styles.statContent}>
+                        <div className={styles.statLabel}>Uber</div>
+                        <div className={styles.statValue}>{stats.uber.count}</div>
+                        <div className={styles.statAmount}>${formatAmount(stats.uber.total)}</div>
+                      </div>
+                    </div>
+
+                    <div className={styles.statCard}>
+                      <div className={styles.statIcon}>🍕</div>
+                      <div className={styles.statContent}>
+                        <div className={styles.statLabel}>PedidosYa</div>
+                        <div className={styles.statValue}>{stats.pedidosya.count}</div>
+                        <div className={styles.statAmount}>${formatAmount(stats.pedidosya.total)}</div>
+                      </div>
+                    </div>
+
+                    <div className={styles.statCard}>
+                      <div className={styles.statIcon}>💵</div>
+                      <div className={styles.statContent}>
+                        <div className={styles.statLabel}>PedidosYa Efectivo</div>
+                        <div className={styles.statValue}>{stats.pedidosya.efectivo}</div>
+                        <div className={styles.statAmount}>${formatAmount(stats.pedidosya.efectivoTotal)}</div>
+                      </div>
+                    </div>
+
+                    <div className={styles.statCard}>
+                      <div className={styles.statIcon}>📱</div>
+                      <div className={styles.statContent}>
+                        <div className={styles.statLabel}>WhatsApp</div>
+                        <div className={styles.statValue}>{stats.whatsapp.count}</div>
+                        <div className={styles.statAmount}>${formatAmount(stats.whatsapp.total)}</div>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
           </div>
         </div>
 
@@ -238,21 +390,50 @@ export default function HistorialPedidos() {
                     <div className={styles.orderInfo}>
                       <p><strong>Monto:</strong> ${formatAmount(order.monto)}</p>
                       {order.comision && order.comision > 0 && (
-                        <p><strong>Comisión ({order.plataforma === 'whatsapp' ? '2%' : '36%'}):</strong> ${formatAmount(order.comision)}</p>
+                        <p><strong>Comisión ({
+                          order.plataforma === 'whatsapp' && order.metodo_pago === 'tarjeta' && order.tipo_tarjeta === 'credito' ? '4%' :
+                          order.plataforma === 'whatsapp' && order.metodo_pago === 'tarjeta' ? '2%' :
+                          order.plataforma === 'whatsapp' ? '0%' :
+                          '36%'
+                        }):</strong> ${formatAmount(order.comision)}</p>
                       )}
-                      {order.monto_neto && (order.plataforma === 'uber' || order.plataforma === 'pedidosya' || (order.plataforma === 'whatsapp' && order.metodo_pago === 'tarjeta')) && (
-                        <p><strong>Monto total:</strong> ${formatAmount(order.monto_neto)}</p>
+                      {(order.plataforma === 'uber' || order.plataforma === 'pedidosya' || (order.plataforma === 'whatsapp' && order.metodo_pago === 'tarjeta') || order.persona_entrega === 'josue') && (
+                        <p><strong>Monto neto:</strong> ${formatAmount(order.monto_neto)}</p>
                       )}
                       {order.referencia && (
                         <p><strong>Referencia:</strong> {order.referencia}</p>
                       )}
                       {order.metodo_pago && order.plataforma === 'whatsapp' && (
-                        <p><strong>Método de Pago:</strong> {getPaymentMethodName(order.metodo_pago)}</p>
+                        <p><strong>Método de Pago:</strong> {getPaymentMethodName(order.metodo_pago)}
+                          {order.metodo_pago === 'tarjeta' && order.tipo_tarjeta &&
+                            ` (${getCardTypeName(order.tipo_tarjeta)})`
+                          }
+                        </p>
                       )}
                       {order.persona_entrega && order.plataforma === 'whatsapp' && (
                         <p><strong>Entrega:</strong> {getDeliveryPersonName(order.persona_entrega)}</p>
                       )}
+                      {order.persona_entrega === 'josue' && order.plataforma === 'whatsapp' && (
+                        <p><strong>Costo Entrega:</strong> -$2,000.00</p>
+                      )}
                     </div>
+                  </div>
+
+                  <div className={styles.orderActions}>
+                    <button
+                      onClick={() => handleEditClick(order)}
+                      className={styles.editButton}
+                      disabled={actionLoading === order.id}
+                    >
+                      {actionLoading === order.id ? 'Cargando...' : 'Editar'}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(order)}
+                      className={styles.deleteButton}
+                      disabled={actionLoading === order.id}
+                    >
+                      Eliminar
+                    </button>
                   </div>
                 </div>
               ))}
@@ -260,6 +441,30 @@ export default function HistorialPedidos() {
           )}
         </div>
       </div>
+
+      {notification && (
+        <Notification
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
+
+      <DeleteConfirmModal
+        order={orders.find(o => o.id === deletingOrderId) || null}
+        isOpen={!!deletingOrderId}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleModalCancel}
+        isLoading={!!actionLoading}
+      />
+
+      <EditOrderModal
+        order={editingOrder}
+        isOpen={!!editingOrder}
+        onSave={handleEditSave}
+        onCancel={handleModalCancel}
+        isLoading={!!actionLoading}
+      />
     </div>
   );
 } 

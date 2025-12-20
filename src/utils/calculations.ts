@@ -1,16 +1,36 @@
 import { Order } from '@/types'
 
-export const calculateCommission = (platform: string, amount: number, paymentMethod?: string): number => {
+export const calculateCommission = (
+  platform: string,
+  amount: number,
+  paymentMethod?: string,
+  cardType?: 'debito' | 'credito'
+): number => {
   if (platform === 'uber' || platform === 'pedidosya') {
     return amount * 0.36 // 36%
   } else if (platform === 'whatsapp' && paymentMethod === 'tarjeta') {
-    return amount * 0.02 // 2%
+    if (cardType === 'credito') {
+      return amount * 0.04 // 4%
+    } else {
+      return amount * 0.02 // 2% (débito o sin especificar)
+    }
   }
   return 0
 }
 
-export const calculateNetAmount = (amount: number, commission: number): number => {
-  return amount - commission
+export const calculateNetAmount = (
+  amount: number,
+  commission: number,
+  deliveryPerson?: string
+): number => {
+  let netAmount = amount - commission;
+
+  // Restar costo de entrega para Josue (2000 pesos)
+  if (deliveryPerson === 'josue') {
+    netAmount -= 2000;
+  }
+
+  return netAmount;
 }
 
 export const formatAmount = (amount: number): string => {

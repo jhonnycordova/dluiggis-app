@@ -86,7 +86,9 @@ function OrderForm({ platform, onBack, isSubmitting, setIsSubmitting }: OrderFor
     referencia: '',
     monto: '',
     metodo_pago: 'efectivo',
-    persona_entrega: 'none'
+    persona_entrega: 'none',
+    tipo_tarjeta: 'debito',
+    pagado_efectivo: false
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,18 +100,24 @@ function OrderForm({ platform, onBack, isSubmitting, setIsSubmitting }: OrderFor
     
     try {
       const monto = parseFloat(formData.monto);
-      const comision = calculateCommission(platform!, monto, formData.metodo_pago);
-      const monto_neto = calculateNetAmount(monto, comision);
-      
+      const comision = calculateCommission(platform!, monto, formData.metodo_pago, formData.tipo_tarjeta as 'debito' | 'credito');
+      const monto_neto = calculateNetAmount(
+        monto,
+        comision,
+        platform === 'whatsapp' ? formData.persona_entrega : undefined
+      );
+
       const orderData = {
         fecha: new Date().toISOString(),
         plataforma: platform!,
         referencia: formData.referencia || undefined,
         monto: monto,
         comision: comision > 0 ? comision : undefined,
-        monto_neto: comision > 0 ? monto_neto : undefined,
+        monto_neto: monto_neto,
         metodo_pago: platform === 'whatsapp' ? formData.metodo_pago : undefined,
-        persona_entrega: platform === 'whatsapp' ? formData.persona_entrega : undefined
+        persona_entrega: platform === 'whatsapp' ? formData.persona_entrega : undefined,
+        tipo_tarjeta: platform === 'whatsapp' && formData.metodo_pago === 'tarjeta' ? formData.tipo_tarjeta : undefined,
+        pagado_efectivo: platform === 'pedidosya' ? formData.pagado_efectivo : undefined
       };
 
       await ordersService.create(orderData);
@@ -125,7 +133,10 @@ function OrderForm({ platform, onBack, isSubmitting, setIsSubmitting }: OrderFor
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [field]: field === 'pagado_efectivo' ? value === 'true' : value
+    }));
   };
 
   const getPlatformName = (platform: Platform) => {
@@ -188,7 +199,7 @@ function OrderForm({ platform, onBack, isSubmitting, setIsSubmitting }: OrderFor
                 className={styles.input}
               />
             </div>
-            
+
             <div className={styles.formGroup}>
               <label htmlFor="monto">Monto:</label>
               <input
@@ -200,6 +211,18 @@ function OrderForm({ platform, onBack, isSubmitting, setIsSubmitting }: OrderFor
                 required
                 className={styles.input}
               />
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={formData.pagado_efectivo}
+                  onChange={(e) => handleInputChange('pagado_efectivo', e.target.checked.toString())}
+                  className={styles.checkbox}
+                />
+                <span>Pagado en efectivo</span>
+              </label>
             </div>
           </>
         )}
@@ -232,19 +255,35 @@ function OrderForm({ platform, onBack, isSubmitting, setIsSubmitting }: OrderFor
                 <option value="tarjeta">Tarjeta</option>
               </select>
             </div>
-            
+
             {formData.metodo_pago === 'tarjeta' && (
-              <div className={styles.formGroup}>
-                <label htmlFor="referencia">Referencia:</label>
-                <input
-                  type="text"
-                  id="referencia"
-                  value={formData.referencia}
-                  onChange={(e) => handleInputChange('referencia', e.target.value)}
-                  required
-                  className={styles.input}
-                />
-              </div>
+              <>
+                <div className={styles.formGroup}>
+                  <label htmlFor="tipo_tarjeta">Tipo de Tarjeta:</label>
+                  <select
+                    id="tipo_tarjeta"
+                    value={formData.tipo_tarjeta}
+                    onChange={(e) => handleInputChange('tipo_tarjeta', e.target.value)}
+                    className={styles.select}
+                    required
+                  >
+                    <option value="debito">Débito (2%)</option>
+                    <option value="credito">Crédito (4%)</option>
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label htmlFor="referencia">Referencia:</label>
+                  <input
+                    type="text"
+                    id="referencia"
+                    value={formData.referencia}
+                    onChange={(e) => handleInputChange('referencia', e.target.value)}
+                    required
+                    className={styles.input}
+                  />
+                </div>
+              </>
             )}
             
             <div className={styles.formGroup}>
