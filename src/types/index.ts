@@ -41,3 +41,10 @@ export interface DatabaseExpense {
   concepto: string;
   monto: number;
 }
+
+export interface WeeklyComment {
+  id: string;
+  plataforma: 'uber' | 'pedidosya' | 'whatsapp';
+  semana_inicio: string;
+  comentario: string;
+}

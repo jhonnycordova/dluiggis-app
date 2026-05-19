@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is **D'Luigis Pizzería & Delivery**, a Next.js order management system for tracking orders from multiple delivery platforms (Uber, PedidosYa, WhatsApp) and managing business expenses. The app is built with Next.js 15.4.5 (App Router), React 19, TypeScript, and Supabase as the backend database.
+This is **D'Luigis Pizzería & Delivery**, a Next.js order management system for tracking orders from multiple delivery platforms (Uber, PedidosYa, WhatsApp) and managing business expenses. The app is built with Next.js 16 (App Router), React 19, TypeScript, and Supabase as the backend database.
 
 ## Development Commands
 
@@ -13,7 +13,7 @@ This is **D'Luigis Pizzería & Delivery**, a Next.js order management system for
 npm run dev
 
 # Production build
-npm build
+npm run build
 
 # Production server
 npm start
@@ -60,6 +60,8 @@ The dev server runs on http://localhost:3000 with Turbopack enabled for faster b
 - monto_neto (number, optional)
 - metodo_pago (string, optional)
 - persona_entrega (string, optional)
+- tipo_tarjeta ('debito' | 'credito', optional)
+- pagado_efectivo (boolean, optional)
 
 **Table: gastos**
 - id (string)
@@ -78,6 +80,8 @@ export const ordersService = {
   async getAll(): Promise<Order[]>
   async getByDate(date: string): Promise<Order[]>
   async getByMonth(year: number, month: number): Promise<Order[]>
+  async update(id: string, data: Partial<Omit<Order, 'id'>>): Promise<Order>
+  async delete(id: string): Promise<void>
 }
 ```
 
@@ -87,8 +91,10 @@ Services use the shared `supabase` client from `@/lib/supabase` and throw errors
 
 Implemented in `src/utils/calculations.ts`:
 - **Uber/PedidosYa**: 36% commission on all orders
-- **WhatsApp (card payment)**: 2% commission
+- **WhatsApp (tarjeta crédito)**: 4% commission
+- **WhatsApp (tarjeta débito or unspecified card)**: 2% commission
 - **WhatsApp (cash/other)**: 0% commission
+- **Delivery deduction**: when `persona_entrega = 'josue'`, subtract 2000 from `monto_neto`
 
 ### Path Aliases
 
@@ -102,7 +108,7 @@ Required in `.env.local`:
 
 ## Key Technologies
 
-- **Next.js 15.4.5** with App Router and Turbopack
+- **Next.js 16** with App Router and Turbopack
 - **React 19** with client-side state management (useState, useEffect)
 - **Supabase** for PostgreSQL database and real-time capabilities
 - **Recharts** for data visualization in the utilities dashboard

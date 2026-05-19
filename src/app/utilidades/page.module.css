@@ -182,11 +182,32 @@
   padding: 1.5rem;
   transition: all 0.3s ease;
   background: #fafafa;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .platformCard:hover {
   border-color: #228B22;
   box-shadow: 0 4px 20px rgba(34, 139, 34, 0.1);
+  transform: translateY(-2px);
+}
+
+.platformCard:focus-visible {
+  outline: 2px solid #228B22;
+  outline-offset: 2px;
+}
+
+.platformHint {
+  margin-top: 1rem;
+  font-size: 0.8rem;
+  color: #228B22;
+  font-weight: 600;
+  align-self: flex-end;
 }
 
 .platformHeader {

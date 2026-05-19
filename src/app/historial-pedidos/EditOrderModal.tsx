@@ -33,8 +33,9 @@ export default function EditOrderModal({
 
   useEffect(() => {
     if (order) {
-      // Convert ISO date to datetime-local format
-      const localDateTime = new Date(order.fecha).toISOString().slice(0, 16)
+      const d = new Date(order.fecha)
+      const pad = (n: number) => String(n).padStart(2, '0')
+      const localDateTime = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 
       setFormData({
         fecha: localDateTime,
@@ -107,6 +108,7 @@ export default function EditOrderModal({
     )
 
     const updatedData: Partial<Order> = {
+      fecha: new Date(formData.fecha).toISOString(),
       plataforma: formData.plataforma,
       referencia: formData.referencia || undefined,
       monto: monto,
@@ -147,6 +149,18 @@ export default function EditOrderModal({
         </div>
 
         <form onSubmit={handleSubmit} className={styles.form}>
+          <div className={styles.formGroup}>
+            <label htmlFor="fecha">Fecha y hora:</label>
+            <input
+              type="datetime-local"
+              id="fecha"
+              value={formData.fecha}
+              onChange={(e) => handleInputChange('fecha', e.target.value)}
+              required
+              className={styles.input}
+            />
+          </div>
+
           <div className={styles.formGroup}>
             <label htmlFor="plataforma">Plataforma:</label>
             <select

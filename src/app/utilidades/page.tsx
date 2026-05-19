@@ -8,6 +8,7 @@ import { expensesService } from '@/services/expenses';
 import { Order, Expense } from '@/types';
 import { formatAmount } from '@/utils/calculations';
 import styles from './page.module.css';
+import WeeklyPlatformModal from './WeeklyPlatformModal';
 
 interface FinancialSummary {
   totalOrders: number;
@@ -21,11 +22,13 @@ interface FinancialSummary {
 
 export default function Utilidades() {
   const router = useRouter();
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [filteredExpenses, setFilteredExpenses] = useState<Expense[]>([]);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const [isLoading, setIsLoading] = useState(true);
+  const [drilldownPlatform, setDrilldownPlatform] = useState<'uber' | 'pedidosya' | 'whatsapp' | null>(null);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalOrders: 0,
     totalRevenue: 0,
@@ -39,12 +42,13 @@ export default function Utilidades() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [allOrders, allExpenses] = await Promise.all([
+      const [fetchedOrders, allExpenses] = await Promise.all([
         ordersService.getAll(),
         expensesService.getAll()
       ]);
 
-      applyFilters(selectedYear, selectedMonth, allOrders, allExpenses);
+      setAllOrders(fetchedOrders);
+      applyFilters(selectedYear, selectedMonth, fetchedOrders, allExpenses);
     } catch (error) {
       console.error('Error al cargar datos:', error);
       alert('Error al cargar los datos');
@@ -312,34 +316,44 @@ export default function Utilidades() {
         <div className={styles.platformStats}>
           <h2 className={styles.sectionTitle}>Análisis por Plataforma</h2>
           <div className={styles.platformGrid}>
-            {Object.entries(getPlatformStats()).map(([platform, stats]) => (
-              <div key={platform} className={styles.platformCard}>
-                <div className={styles.platformHeader}>
-                  <h3 className={styles.platformName}>
-                    {platform === 'uber' ? '🚗 Uber' : 
-                     platform === 'pedidosya' ? '🍕 PedidosYa' : '📱 WhatsApp'}
-                  </h3>
-                </div>
-                <div className={styles.platformMetrics}>
-                  <div className={styles.metric}>
-                    <span className={styles.metricLabel}>Pedidos:</span>
-                    <span className={styles.metricValue}>{stats.orders}</span>
+            {Object.entries(getPlatformStats()).map(([platform, stats]) => {
+              const platformKey = platform as 'uber' | 'pedidosya' | 'whatsapp';
+              return (
+                <button
+                  key={platform}
+                  type="button"
+                  className={styles.platformCard}
+                  onClick={() => setDrilldownPlatform(platformKey)}
+                  aria-label={`Ver detalle semanal de ${platform}`}
+                >
+                  <div className={styles.platformHeader}>
+                    <h3 className={styles.platformName}>
+                      {platform === 'uber' ? '🚗 Uber' :
+                       platform === 'pedidosya' ? '🍕 PedidosYa' : '📱 WhatsApp'}
+                    </h3>
                   </div>
-                  <div className={styles.metric}>
-                    <span className={styles.metricLabel}>Ingresos:</span>
-                    <span className={styles.metricValue}>${formatAmount(stats.revenue)}</span>
+                  <div className={styles.platformMetrics}>
+                    <div className={styles.metric}>
+                      <span className={styles.metricLabel}>Pedidos:</span>
+                      <span className={styles.metricValue}>{stats.orders}</span>
+                    </div>
+                    <div className={styles.metric}>
+                      <span className={styles.metricLabel}>Ingresos:</span>
+                      <span className={styles.metricValue}>${formatAmount(stats.revenue)}</span>
+                    </div>
+                    <div className={styles.metric}>
+                      <span className={styles.metricLabel}>Comisiones:</span>
+                      <span className={styles.metricValue}>${formatAmount(stats.commissions)}</span>
+                    </div>
+                    <div className={styles.metric}>
+                      <span className={styles.metricLabel}>Neto:</span>
+                      <span className={styles.metricValue}>${formatAmount(stats.netRevenue)}</span>
+                    </div>
                   </div>
-                  <div className={styles.metric}>
-                    <span className={styles.metricLabel}>Comisiones:</span>
-                    <span className={styles.metricValue}>${formatAmount(stats.commissions)}</span>
-                  </div>
-                  <div className={styles.metric}>
-                    <span className={styles.metricLabel}>Neto:</span>
-                    <span className={styles.metricValue}>${formatAmount(stats.netRevenue)}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
+                  <span className={styles.platformHint}>Ver detalle semanal →</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -481,6 +495,15 @@ export default function Utilidades() {
           </div>
         )}
       </div>
+
+      <WeeklyPlatformModal
+        platform={drilldownPlatform}
+        year={selectedYear}
+        month={selectedMonth}
+        allOrders={allOrders}
+        isOpen={drilldownPlatform !== null}
+        onClose={() => setDrilldownPlatform(null)}
+      />
     </div>
   );
-} 
+}
