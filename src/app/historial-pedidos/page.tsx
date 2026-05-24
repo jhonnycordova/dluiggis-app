@@ -36,9 +36,9 @@ export default function HistorialPedidos() {
       // Determine which date to show by default
       const now = new Date();
       const currentHour = now.getHours();
-      
-      // If it's early morning (before 6 AM), show yesterday's orders
-      // This handles the case where late night orders appear as next day in UTC
+
+      // If it's early morning (before 6 AM), default to yesterday so the
+      // previous night's shift stays visible.
       let defaultDate;
       if (currentHour < 6) {
         // Show yesterday's orders
@@ -60,12 +60,10 @@ export default function HistorialPedidos() {
       // Apply filter for the default date
       const filtered = allOrders.filter((order: Order) => {
         const orderDate = new Date(order.fecha);
-        // Convert UTC date to local date for comparison
-        const localOrderDate = new Date(orderDate.getTime() - (orderDate.getTimezoneOffset() * 60000));
-        const orderDateString = localOrderDate.getFullYear() + '-' + 
-          String(localOrderDate.getMonth() + 1).padStart(2, '0') + '-' + 
-          String(localOrderDate.getDate()).padStart(2, '0');
-        
+        const orderDateString = orderDate.getFullYear() + '-' +
+          String(orderDate.getMonth() + 1).padStart(2, '0') + '-' +
+          String(orderDate.getDate()).padStart(2, '0');
+
         return orderDateString === defaultDateString;
       });
       
@@ -89,31 +87,14 @@ export default function HistorialPedidos() {
       setFilteredOrders(orders);
     } else {
       try {
-        // For date filtering, we need to consider the full day in local timezone
         const startDate = new Date(date + 'T00:00:00');
-        const endDate = new Date(date + 'T23:59:59');
-        
-        // Convert local dates to UTC for comparison with Supabase dates
-        const utcStartDate = new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000));
-        const utcEndDate = new Date(endDate.getTime() - (endDate.getTimezoneOffset() * 60000));
-        
-        console.log(`Filtrando por fecha: ${date}`);
-        console.log(`Rango local: ${startDate.toISOString()} - ${endDate.toISOString()}`);
-        console.log(`Rango UTC: ${utcStartDate.toISOString()} - ${utcEndDate.toISOString()}`);
-        
-        // Filter orders that fall within the local date range
+        const endDate = new Date(date + 'T23:59:59.999');
+
         const filtered = orders.filter(order => {
           const orderDate = new Date(order.fecha);
-          const isInRange = orderDate >= utcStartDate && orderDate <= utcEndDate;
-          
-          if (isInRange) {
-            console.log(`Pedido ${order.id} incluido: ${order.fecha}`);
-          }
-          
-          return isInRange;
+          return orderDate >= startDate && orderDate <= endDate;
         });
-        
-        console.log(`Pedidos encontrados para ${date}: ${filtered.length}`);
+
         setFilteredOrders(filtered);
       } catch (error) {
         console.error('Error al filtrar por fecha:', error);

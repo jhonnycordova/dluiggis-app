@@ -64,23 +64,17 @@ export default function Utilidades() {
 
   const applyFilters = async (year: number, month: number, allOrders: Order[], allExpenses: Expense[]) => {
     try {
-      // For month filtering, we need to consider the full month in local timezone
       const startDate = new Date(year, month, 1);
       const endDate = new Date(year, month + 1, 0, 23, 59, 59, 999);
-      
-      // Convert local dates to UTC for Supabase query
-      const utcStartDate = new Date(startDate.getTime() - (startDate.getTimezoneOffset() * 60000));
-      const utcEndDate = new Date(endDate.getTime() - (endDate.getTimezoneOffset() * 60000));
-      
-      // Filter orders and expenses that fall within the local month range
+
       const filteredOrders = allOrders.filter(order => {
         const orderDate = new Date(order.fecha);
-        return orderDate >= utcStartDate && orderDate <= utcEndDate;
+        return orderDate >= startDate && orderDate <= endDate;
       });
-      
+
       const filteredExpenses = allExpenses.filter(expense => {
         const expenseDate = new Date(expense.fecha);
-        return expenseDate >= utcStartDate && expenseDate <= utcEndDate;
+        return expenseDate >= startDate && expenseDate <= endDate;
       });
       
       setFilteredOrders(filteredOrders);
@@ -184,17 +178,12 @@ export default function Utilidades() {
       date.setDate(date.getDate() - i);
       const dayString = date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
       
-      // Create local date range for the day
       const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999);
-      
-      // Convert to UTC for comparison with Supabase dates
-      const utcStartOfDay = new Date(startOfDay.getTime() - (startOfDay.getTimezoneOffset() * 60000));
-      const utcEndOfDay = new Date(endOfDay.getTime() - (endOfDay.getTimezoneOffset() * 60000));
-      
+
       const dayOrders = filteredOrders.filter(order => {
         const orderDate = new Date(order.fecha);
-        return orderDate >= utcStartOfDay && orderDate <= utcEndOfDay;
+        return orderDate >= startOfDay && orderDate <= endOfDay;
       });
 
       const dayRevenue = dayOrders.reduce((sum, order) => sum + (order.monto_neto || 0), 0);
