@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { WeeklyComment } from '@/types'
 
-type Platform = 'uber' | 'pedidosya' | 'whatsapp'
+type Platform = 'uber' | 'pedidosya' | 'whatsapp' | 'transbank'
 
 export const weeklyCommentsService = {
   async getByRange(

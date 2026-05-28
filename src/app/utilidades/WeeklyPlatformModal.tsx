@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Order, WeeklyComment } from '@/types'
-import { formatAmount } from '@/utils/calculations'
+import { formatAmount, isTransbankOrder, getTransbankNet } from '@/utils/calculations'
 import { weeklyCommentsService } from '@/services/weeklyComments'
 import styles from './WeeklyPlatformModal.module.css'
 
-type Platform = 'uber' | 'pedidosya' | 'whatsapp'
+type Platform = 'uber' | 'pedidosya' | 'whatsapp' | 'transbank'
 
 interface WeeklyPlatformModalProps {
   platform: Platform | null
@@ -34,7 +34,8 @@ interface WeekRow {
 const PLATFORM_LABELS: Record<Platform, string> = {
   uber: '🚗 Uber',
   pedidosya: '🍕 PedidosYa',
-  whatsapp: '📱 WhatsApp'
+  whatsapp: '📱 WhatsApp',
+  transbank: '💳 Transbank'
 }
 
 const MONTH_NAMES = [
@@ -120,7 +121,10 @@ export default function WeeklyPlatformModal({
         netRevenue: 0
       }
       allOrders.forEach(order => {
-        if (order.plataforma !== platform) return
+        const matchesPlatform = platform === 'transbank'
+          ? isTransbankOrder(order)
+          : order.plataforma === platform
+        if (!matchesPlatform) return
         const orderDate = new Date(order.fecha)
         const inWeek = orderDate >= range.start && orderDate <= range.end
         const inMonth = orderDate >= monthStart && orderDate <= monthEnd
@@ -128,7 +132,10 @@ export default function WeeklyPlatformModal({
           row.orders++
           row.revenue += order.monto
           row.commissions += order.comision || 0
-          row.netRevenue += order.monto_neto || 0
+          // Para Transbank el neto es monto − comisión (no monto_neto)
+          row.netRevenue += platform === 'transbank'
+            ? getTransbankNet(order)
+            : order.monto_neto || 0
         }
       })
       return row

@@ -1,3 +1,14 @@
+import { Order } from '@/types'
+
+// Un pedido Transbank es un pedido de WhatsApp pagado con tarjeta (la maquinita)
+export const isTransbankOrder = (order: Order): boolean =>
+  order.plataforma === 'whatsapp' && order.metodo_pago === 'tarjeta'
+
+// Lo que Transbank deposita: monto − comisión (NO usa monto_neto, que resta el
+// costo de entrega de Josué)
+export const getTransbankNet = (order: Order): number =>
+  order.monto - (order.comision || 0)
+
 export const calculateCommission = (
   platform: string,
   amount: number,

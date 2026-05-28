@@ -6,7 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { ordersService } from '@/services/orders';
 import { expensesService } from '@/services/expenses';
 import { Order, Expense } from '@/types';
-import { formatAmount } from '@/utils/calculations';
+import { formatAmount, isTransbankOrder, getTransbankNet } from '@/utils/calculations';
 import styles from './page.module.css';
 import WeeklyPlatformModal from './WeeklyPlatformModal';
 
@@ -28,7 +28,7 @@ export default function Utilidades() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth());
   const [isLoading, setIsLoading] = useState(true);
-  const [drilldownPlatform, setDrilldownPlatform] = useState<'uber' | 'pedidosya' | 'whatsapp' | null>(null);
+  const [drilldownPlatform, setDrilldownPlatform] = useState<'uber' | 'pedidosya' | 'whatsapp' | 'transbank' | null>(null);
   const [summary, setSummary] = useState<FinancialSummary>({
     totalOrders: 0,
     totalRevenue: 0,
@@ -124,7 +124,8 @@ export default function Utilidades() {
     const stats = {
       uber: { orders: 0, revenue: 0, commissions: 0, netRevenue: 0 },
       pedidosya: { orders: 0, revenue: 0, commissions: 0, netRevenue: 0 },
-      whatsapp: { orders: 0, revenue: 0, commissions: 0, netRevenue: 0 }
+      whatsapp: { orders: 0, revenue: 0, commissions: 0, netRevenue: 0 },
+      transbank: { orders: 0, revenue: 0, commissions: 0, netRevenue: 0 }
     };
 
     filteredOrders.forEach(order => {
@@ -132,6 +133,14 @@ export default function Utilidades() {
       stats[order.plataforma].revenue += order.monto;
       stats[order.plataforma].commissions += order.comision || 0;
       stats[order.plataforma].netRevenue += order.monto_neto || 0;
+
+      // Transbank = pedidos de WhatsApp con tarjeta; neto = monto − comisión
+      if (isTransbankOrder(order)) {
+        stats.transbank.orders++;
+        stats.transbank.revenue += order.monto;
+        stats.transbank.commissions += order.comision || 0;
+        stats.transbank.netRevenue += getTransbankNet(order);
+      }
     });
 
     return stats;
@@ -306,7 +315,7 @@ export default function Utilidades() {
           <h2 className={styles.sectionTitle}>Análisis por Plataforma</h2>
           <div className={styles.platformGrid}>
             {Object.entries(getPlatformStats()).map(([platform, stats]) => {
-              const platformKey = platform as 'uber' | 'pedidosya' | 'whatsapp';
+              const platformKey = platform as 'uber' | 'pedidosya' | 'whatsapp' | 'transbank';
               return (
                 <button
                   key={platform}
@@ -318,7 +327,8 @@ export default function Utilidades() {
                   <div className={styles.platformHeader}>
                     <h3 className={styles.platformName}>
                       {platform === 'uber' ? '🚗 Uber' :
-                       platform === 'pedidosya' ? '🍕 PedidosYa' : '📱 WhatsApp'}
+                       platform === 'pedidosya' ? '🍕 PedidosYa' :
+                       platform === 'whatsapp' ? '📱 WhatsApp' : '💳 Transbank'}
                     </h3>
                   </div>
                   <div className={styles.platformMetrics}>

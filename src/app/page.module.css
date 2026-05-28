@@ -146,6 +146,31 @@
   background: linear-gradient(135deg, #FF5722, #E64A19);
 }
 
+.reportButton {
+  padding: 1.2rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  background: linear-gradient(135deg, #1e90ff, #0066cc);
+  color: white;
+}
+
+.reportButton:hover,
+.reportButton:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #4da6ff, #1e90ff);
+}
+
 /* Mobile-first responsive design */
 @media (max-width: 480px) {
   .container {
@@ -176,7 +201,8 @@
   .primaryButton,
   .secondaryButton,
   .tertiaryButton,
-  .expenseButton {
+  .expenseButton,
+  .reportButton {
     padding: 1rem 1.5rem;
     font-size: 1rem;
     min-height: 56px;
@@ -208,7 +234,8 @@
   .primaryButton,
   .secondaryButton,
   .tertiaryButton,
-  .expenseButton {
+  .expenseButton,
+  .reportButton {
     padding: 1.2rem 2rem;
     font-size: 1.2rem;
     min-height: 60px;
@@ -220,15 +247,17 @@
   .primaryButton,
   .secondaryButton,
   .tertiaryButton,
-  .expenseButton {
+  .expenseButton,
+  .reportButton {
     min-height: 64px;
     font-size: 1.1rem;
   }
-  
+
   .primaryButton:active,
   .secondaryButton:active,
   .tertiaryButton:active,
-  .expenseButton:active {
+  .expenseButton:active,
+  .reportButton:active {
     transform: scale(0.98);
   }
 }

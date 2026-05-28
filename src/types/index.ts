@@ -44,7 +44,7 @@ export interface DatabaseExpense {
 
 export interface WeeklyComment {
   id: string;
-  plataforma: 'uber' | 'pedidosya' | 'whatsapp';
+  plataforma: 'uber' | 'pedidosya' | 'whatsapp' | 'transbank';
   semana_inicio: string;
   comentario: string;
 }
