@@ -15,7 +15,7 @@ export interface Order {
 export interface Expense {
   id: string;
   fecha: string;
-  tipo: 'salario' | 'insumos' | 'otros';
+  tipo: 'salario' | 'insumos' | 'otros' | 'gastos_personales';
   concepto: string;
   monto: number;
 }
@@ -37,7 +37,7 @@ export interface DatabaseOrder {
 export interface DatabaseExpense {
   id: string;
   fecha: string;
-  tipo: 'salario' | 'insumos' | 'otros';
+  tipo: 'salario' | 'insumos' | 'otros' | 'gastos_personales';
   concepto: string;
   monto: number;
 }

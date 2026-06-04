@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { expensesService } from '@/services/expenses';
 import styles from './page.module.css';
 
-type ExpenseType = 'salario' | 'insumos' | 'otros';
+type ExpenseType = 'salario' | 'insumos' | 'otros' | 'gastos_personales';
 
 export default function RegistrarGasto() {
   const router = useRouter();
@@ -70,6 +70,7 @@ export default function RegistrarGasto() {
               >
                 <option value="salario">Salario</option>
                 <option value="insumos">Insumos</option>
+                <option value="gastos_personales">Gastos Personales</option>
                 <option value="otros">Otros</option>
               </select>
             </div>

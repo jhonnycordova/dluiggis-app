@@ -45,13 +45,20 @@ export default function Home() {
             Registrar Gasto
           </button>
           
-          <button 
+          <button
             onClick={handleHistorialPedidos}
             className={styles.secondaryButton}
           >
             Historial de Pedidos
           </button>
-          
+
+          <button
+            onClick={() => router.push('/historial-gastos')}
+            className={styles.expenseHistoryButton}
+          >
+            Historial de Gastos
+          </button>
+
           <button
             onClick={() => router.push('/report-transbank')}
             className={styles.reportButton}

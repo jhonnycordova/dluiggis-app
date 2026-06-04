@@ -169,6 +169,7 @@ export default function Utilidades() {
     const expenseTypes = {
       salario: { name: 'Salario', value: 0, color: '#FF6B35' },
       insumos: { name: 'Insumos', value: 0, color: '#228B22' },
+      gastos_personales: { name: 'Gastos Personales', value: 0, color: '#9B59B6' },
       otros: { name: 'Otros', value: 0, color: '#C41E3A' }
     };
 
@@ -480,8 +481,9 @@ export default function Utilidades() {
                       <td>{new Date(expense.fecha).toLocaleDateString('es-ES')}</td>
                       <td>
                         <span className={styles.expenseTag}>
-                          {expense.tipo === 'salario' ? '👷 Salario' : 
-                           expense.tipo === 'insumos' ? '🥬 Insumos' : '📦 Otros'}
+                          {expense.tipo === 'salario' ? '👷 Salario' :
+                           expense.tipo === 'insumos' ? '🥬 Insumos' :
+                           expense.tipo === 'gastos_personales' ? '👤 Gastos Personales' : '📦 Otros'}
                         </span>
                       </td>
                       <td>{expense.concepto}</td>
